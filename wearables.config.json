@@ -1,0 +1,6 @@
+{
+  "platform": "meta-ray-ban-display",
+  "ui": "meta-ray-ban-display-ui-toolkit",
+  "toolkitRepository": "https://github.com/facebook/meta-ray-ban-display-ui-toolkit-web/",
+  "toolkitPackages": {}
+}

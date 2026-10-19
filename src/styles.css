@@ -1,0 +1,89 @@
+:root {
+  color-scheme: dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  background: var(--uit-color-background-window);
+}
+
+.coach-screen {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  background: var(--uit-color-background-window);
+  text-align: center;
+}
+
+.scroll-content {
+  padding-inline: var(--uit-spacing-large);
+}
+
+.run-view,
+.interval-cue,
+.ask-view,
+.squad-view {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--uit-spacing-small);
+  padding: var(--uit-spacing-large);
+}
+
+.eyebrow,
+.stat-label,
+.pace-number,
+.pace-unit,
+.run-cue,
+.cue-title,
+.cue-subtitle,
+.breath-cue,
+.question,
+.answer,
+.answer-detail,
+.squad-count,
+.squad-detail,
+.vision-note {
+  margin: 0;
+}
+
+.run-stats {
+  display: flex;
+  justify-content: center;
+  gap: var(--uit-spacing-large);
+}
+
+.stat {
+  display: grid;
+  gap: var(--uit-spacing-xsmall);
+}
+
+.progress-track {
+  width: 72%;
+  background: var(--uit-color-border-primary);
+}
+
+.progress-track > span {
+  display: block;
+  width: 30%;
+  background: var(--uit-color-text-primary);
+}
+
+.ask-view {
+  align-items: stretch;
+}
+
+.screen-position {
+  padding: var(--uit-spacing-small);
+}
