@@ -11,12 +11,49 @@ import {
 } from '@wearables-ui-toolkit/mrbd';
 
 type Screen = 'run' | 'cue' | 'ask' | 'squad';
+type CoachStatus = 'idle' | 'loading' | 'error';
 
 const screens: Screen[] = ['run', 'cue', 'ask', 'squad'];
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('run');
+  const [coachAnswer, setCoachAnswer] = useState<string | null>(null);
+  const [coachStatus, setCoachStatus] = useState<CoachStatus>('idle');
+  const requestInFlight = useRef(false);
   const askButton = useRef<ComponentRef<typeof Button>>(null);
+
+  const askCoach = async () => {
+    if (requestInFlight.current) return;
+    requestInFlight.current = true;
+    setCoachStatus('loading');
+    try {
+      const response = await fetch('/api/coach', {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({
+          screen: 'ask',
+          context: {
+            question: 'How far is the runner ahead?',
+            pace: '5:45 / km',
+            distance: '1.8 km',
+            elapsed: '12:40',
+          },
+        }),
+      });
+      if (!response.ok) throw new Error('Coach request failed');
+      const result: unknown = await response.json();
+      if (typeof result === 'object' && result !== null && 'text' in result && typeof result.text === 'string') {
+        setCoachAnswer(result.text);
+        setCoachStatus('idle');
+      } else {
+        throw new Error('Invalid coach response');
+      }
+    } catch {
+      setCoachStatus('error');
+    } finally {
+      requestInFlight.current = false;
+    }
+  };
 
   useEffect(() => {
     const handleDpad = (event: KeyboardEvent) => {
@@ -73,19 +110,20 @@ export default function App() {
           {screen === 'ask' && (
             <section className="ask-view" aria-label="Ask Meta">
               <TextView as="p" textStyle={TextStyle.BODY2} className="question">“How far is the runner ahead?”</TextView>
-              <TextView as="p" textStyle={TextStyle.BODY2_EMPHASIZED} className="answer">≈15 m</TextView>
-              <TextView as="p" textStyle={TextStyle.BODY2} className="answer-detail">holding your pace</TextView>
+              {coachStatus === 'loading' && (
+                <TextView as="p" textStyle={TextStyle.BODY2_EMPHASIZED} className="coach-status" role="status">Asking…</TextView>
+              )}
+              {coachStatus === 'error' && (
+                <TextView as="p" textStyle={TextStyle.BODY2_EMPHASIZED} className="coach-status" role="alert">Couldn't reach the coach — try again</TextView>
+              )}
+              {coachAnswer !== null && (
+                <TextView as="p" textStyle={TextStyle.BODY2_EMPHASIZED} className="answer">{coachAnswer}</TextView>
+              )}
               <Button
                 ref={askButton}
                 className="ask-button"
-                title="Hear answer"
-                onClick={() => {
-                  if (!('speechSynthesis' in window)) return;
-                  window.speechSynthesis.cancel();
-                  window.speechSynthesis.speak(
-                    new SpeechSynthesisUtterance('About 15 meters ahead, holding your pace.'),
-                  );
-                }}
+                title="Ask Meta"
+                onClick={askCoach}
               />
             </section>
           )}

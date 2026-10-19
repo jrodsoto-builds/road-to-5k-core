@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:preview": "node server/proxy.mjs & proxy_pid=$!; trap 'kill $proxy_pid 2>/dev/null' EXIT; vite preview",
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview"

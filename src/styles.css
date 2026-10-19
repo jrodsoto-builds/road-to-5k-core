@@ -24,6 +24,10 @@ body,
   text-align: center;
 }
 
+.coach-screen--ask {
+  background: #000;
+}
+
 .scroll-content {
   padding-inline: var(--uit-spacing-large);
 }
@@ -51,6 +55,7 @@ body,
 .breath-cue,
 .question,
 .answer,
+.coach-status,
 .answer-detail,
 .squad-count,
 .squad-detail,
@@ -82,6 +87,11 @@ body,
 
 .ask-view {
   align-items: stretch;
+}
+
+.coach-status {
+  color: var(--uit-color-text-primary);
+  white-space: nowrap;
 }
 
 .screen-position {
