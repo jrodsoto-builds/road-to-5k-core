@@ -95,5 +95,6 @@ body,
 }
 
 .screen-position {
+  font-size: 18px;
   padding: var(--uit-spacing-small);
 }
