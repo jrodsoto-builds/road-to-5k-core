@@ -45,6 +45,37 @@ body,
   padding: var(--uit-spacing-large);
 }
 
+.today-view {
+  display: flex;
+  min-height: 55vh;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: var(--uit-spacing-small);
+  padding: var(--uit-spacing-large);
+  background: #000;
+}
+
+.today-count,
+.today-name { margin: 0; }
+.today-count { font-size: clamp(1.5rem, 8vw, 2.5rem); }
+.today-name { font-size: clamp(1.1rem, 5vw, 1.5rem); }
+
+.plan-view {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 1rem;
+  text-align: left;
+}
+.plan-view h1 { margin: 0 0 1rem; font-size: 1.5rem; }
+.pt-instruction { padding: .75rem; border-left: 3px solid var(--uit-color-text-primary); background: #171717; }
+.plan-table-wrap { overflow-x: auto; }
+.plan-view table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+.plan-view th, .plan-view td { padding: .7rem .5rem; border-bottom: 1px solid #444; text-align: left; vertical-align: top; }
+.plan-view thead th { position: sticky; top: 0; background: #000; }
+.plan-group th { padding-top: 1rem; color: var(--uit-color-text-primary); }
+.annotation { display: block; color: var(--uit-color-text-secondary); font-size: .85em; }
+
 .eyebrow,
 .stat-label,
 .pace-number,

@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from 'react';
+import {Fragment, useEffect, useRef, useState} from 'react';
 import type {ComponentRef} from 'react';
 import {
   App as WearablesApp,
@@ -11,10 +11,12 @@ import {
 } from '@wearables-ui-toolkit/mrbd';
 import {countPassersby, getRunnerDistance} from './tools';
 
-type Screen = 'run' | 'cue' | 'ask' | 'squad';
+type Exercise = {name: string | null; group: string | null; sets: string | number | null; reps: string | number | null; durationSec: string | number | null; side: 'each' | null; notes: string | null};
+type Plan = {exercises: Exercise[]; instructions?: {text: string; exercises?: string[]; groups?: string[]}[]; sourceDate?: string | null; scheduleNotes?: string | null} | null;
+type Screen = 'run' | 'cue' | 'ask' | 'squad' | 'today' | 'plan';
 type CoachStatus = 'idle' | 'loading' | 'error';
 
-const screens: Screen[] = ['run', 'cue', 'ask', 'squad'];
+const lensScreens: Screen[] = ['run', 'cue', 'ask', 'squad', 'today'];
 const questions = [
   'How far is the runner ahead of me?',
   'How many people passed me, and how many are in my age group?',
@@ -23,12 +25,29 @@ const questions = [
 
 function screenFromLocation(): Screen {
   const route = window.location.hash.slice(2);
-  return screens.includes(route as Screen) ? route as Screen : 'run';
+  return [...lensScreens, 'plan'].includes(route as Screen) ? route as Screen : 'run';
 }
 
 function writeScreenRoute(next: Screen, replace = false) {
   const method = replace ? 'replaceState' : 'pushState';
   window.history[method]({}, '', `#/${next}`);
+}
+
+function planSlotCount(exercises: Exercise[]) {
+  const slots = new Set<string>();
+  exercises.forEach((exercise, index) => slots.add(exercise.group ? `group:${exercise.group}` : `exercise:${index}`));
+  return slots.size;
+}
+
+function FragmentRow({group, exercise, prescription, applies}: {group: string | null; exercise: Exercise; prescription: string; applies: boolean}) {
+  return <Fragment>
+    {group && <tr className="plan-group"><th colSpan={3}>{group}</th></tr>}
+    <tr>
+      <td>{exercise.name ?? '—'}</td>
+      <td>{prescription}{applies && <span className="annotation"> · both legs</span>}{exercise.side === 'each' && !applies && <span> · each side</span>}</td>
+      <td>{exercise.notes ?? '—'}</td>
+    </tr>
+  </Fragment>;
 }
 
 export default function App() {
@@ -41,6 +60,8 @@ export default function App() {
   const [coachStatus, setCoachStatus] = useState<CoachStatus>('idle');
   const [questionIndex, setQuestionIndex] = useState(0);
   const [squadCount] = useState(() => countPassersby());
+  const [plan, setPlan] = useState<Plan>(null);
+  const [planState, setPlanState] = useState<'loading' | 'ready' | 'error'>('loading');
   const requestInFlight = useRef(false);
   const askButton = useRef<ComponentRef<typeof Button>>(null);
 
@@ -55,6 +76,18 @@ export default function App() {
     window.addEventListener('popstate', restoreScreen);
     return () => window.removeEventListener('popstate', restoreScreen);
   }, []);
+
+  useEffect(() => {
+    if (screen !== 'plan' && screen !== 'today') return;
+    let active = true;
+    fetch('/api/plan/current').then(response => {
+      if (!response.ok) throw new Error('Plan request failed');
+      return response.json() as Promise<Plan>;
+    }).then(value => {
+      if (active) { setPlan(value); setPlanState('ready'); }
+    }).catch(() => { if (active) setPlanState('error'); });
+    return () => { active = false; };
+  }, [screen]);
 
   const askCoach = async () => {
     if (requestInFlight.current) return;
@@ -143,8 +176,9 @@ export default function App() {
         return;
       }
       const direction = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1;
-      const next = (screens.indexOf(screen) + direction + screens.length) % screens.length;
-      navigateToScreen(screens[next]);
+      const current = lensScreens.includes(screen) ? screen : 'run';
+      const next = (lensScreens.indexOf(current) + direction + lensScreens.length) % lensScreens.length;
+      navigateToScreen(lensScreens[next]);
     };
 
     window.addEventListener('keydown', handleDpad);
@@ -217,7 +251,37 @@ export default function App() {
               <TextView as="p" textStyle={TextStyle.BODY2} className="vision-note">vision estimates</TextView>
             </section>
           )}
-          <div className="screen-position" aria-hidden="true">{screens.indexOf(screen) + 1} / 4</div>
+          {screen === 'today' && (
+            <section className="today-view" aria-label="Today's plan">
+              <TextView as="p" textStyle={TextStyle.BODY2_EMPHASIZED} className="today-count">Today: {planState === 'ready' && plan ? planSlotCount(plan.exercises) : '—'} exercises</TextView>
+              <TextView as="p" textStyle={TextStyle.BODY2} className="today-name">{planState === 'ready' ? plan?.exercises[0]?.name ?? 'No exercise listed' : planState === 'error' ? 'Plan unavailable' : 'Loading plan…'}</TextView>
+            </section>
+          )}
+          {screen === 'plan' && (
+            <section className="plan-view" aria-label="Physical therapy plan">
+              <h1>PT plan</h1>
+              {planState === 'loading' && <p>Loading plan…</p>}
+              {planState === 'error' && <p role="alert">Couldn’t load the plan.</p>}
+              {planState === 'ready' && !plan && <p>No saved plan yet.</p>}
+              {plan && <>
+                {(plan.instructions ?? []).map(instruction => <p className="pt-instruction" key={instruction.text}><strong>PT instructions (confirmed by you):</strong> {instruction.text}</p>)}
+                <div className="plan-table-wrap"><table><thead><tr><th>Exercise</th><th>Prescription</th><th>Notes</th></tr></thead><tbody>
+                  {plan.exercises.map((exercise, index) => {
+                    const prev = index > 0 ? plan.exercises[index - 1].group : null;
+                    const showGroup = Boolean(exercise.group && exercise.group !== prev);
+                    const prescription = exercise.durationSec != null
+                      ? `${exercise.reps ?? '—'} holds × ${exercise.durationSec} sec`
+                      : exercise.sets != null || exercise.reps != null
+                        ? `${exercise.sets ?? '—'} sets × ${exercise.reps ?? '—'} reps`
+                        : '—';
+                    const applies = (plan.instructions ?? []).some(instruction => instruction.exercises?.includes(exercise.name ?? '') || instruction.groups?.includes(exercise.group ?? ''));
+                    return <FragmentRow key={`${index}-${exercise.name}`} group={showGroup ? exercise.group : null} exercise={exercise} prescription={prescription} applies={applies} />;
+                  })}
+                </tbody></table></div>
+              </>}
+            </section>
+          )}
+          {lensScreens.includes(screen) && <div className="screen-position" aria-hidden="true">{lensScreens.indexOf(screen) + 1} / 5</div>}
           </main>
           </div>
         </ScrollView>
